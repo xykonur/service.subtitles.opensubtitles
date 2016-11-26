@@ -1,3 +1,6 @@
+5.0.15
+- Users are able to download subtitles as anonymous without authentication.
+
 5.0.14
 - Fix for Portuguese (Brazil) broken by 42f6ec9, thx host505
 
