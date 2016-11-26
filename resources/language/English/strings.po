@@ -31,5 +31,5 @@ msgid "Login Details"
 msgstr ""
 
 msgctxt "#32005"
-msgid "check username/pass or register at opensubtitles.org"
+msgid "Your opensubtitles.org username or password is empty or not valid"
 msgstr ""
