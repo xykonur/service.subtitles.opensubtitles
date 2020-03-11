@@ -6,9 +6,11 @@ import xbmc
 import struct
 import urllib
 import xbmcvfs
-import xmlrpclib
+import xmlrpc
 import xbmcaddon
 import unicodedata
+from xmlrpc import client
+from urllib.parse import unquote
 
 __addon__      = xbmcaddon.Addon()
 __version__    = __addon__.getAddonInfo('version') # Module version
@@ -18,17 +20,16 @@ BASE_URL_XMLRPC = u"http://api.opensubtitles.org/xml-rpc"
 
 class OSDBServer:
   def __init__( self, *args, **kwargs ):
-    self.server = xmlrpclib.Server( BASE_URL_XMLRPC, verbose=0 )
+    self.server = xmlrpc.client.ServerProxy( BASE_URL_XMLRPC, verbose=0 )
     login = self.server.LogIn(__addon__.getSetting( "OSuser" ), __addon__.getSetting( "OSpass" ), "en", "%s_v%s" %(__scriptname__.replace(" ","_"),__version__))
     if (login["status"] == "200 OK"):
       self.osdb_token  = login[ "token" ]
-
   def searchsubtitles( self, item):
     if ( self.osdb_token ) :
       searchlist  = []
       if item['mansearch']:
         searchlist = [{'sublanguageid':",".join(item['3let_language']),
-                       'query'        :urllib.unquote(item['mansearchstr'])
+                       'query'        :unquote(item['mansearchstr'])
                       }]
         search = self.server.SearchSubtitles( self.osdb_token, searchlist )
         if search["data"]:
@@ -77,6 +78,7 @@ class OSDBServer:
                       }]
 
       search = self.server.SearchSubtitles( self.osdb_token, searchlist )
+
       if search["data"]:
         return search["data"] 
 
@@ -99,7 +101,7 @@ class OSDBServer:
        return False
 
 def log(module, msg):
-  xbmc.log((u"### [%s] - %s" % (module,msg,)).encode('utf-8'),level=xbmc.LOGDEBUG ) 
+  xbmc.log((u"### [%s] - %s" % (module,msg,)),level=xbmc.LOGDEBUG ) 
 
 def hashFile(file_path, rar):
     if rar:
@@ -176,6 +178,4 @@ def addfilehash(name,hash,seek):
     return hash
 
 def normalizeString(str):
-  return unicodedata.normalize(
-         'NFKD', unicode(unicode(str, 'utf-8'))
-         ).encode('ascii','ignore')
+  return unicodedata.normalize('NFKD', str)

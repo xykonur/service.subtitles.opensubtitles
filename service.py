@@ -17,10 +17,10 @@ __scriptname__ = __addon__.getAddonInfo('name')
 __version__    = __addon__.getAddonInfo('version')
 __language__   = __addon__.getLocalizedString
 
-__cwd__        = xbmc.translatePath( __addon__.getAddonInfo('path') ).decode("utf-8")
-__profile__    = xbmc.translatePath( __addon__.getAddonInfo('profile') ).decode("utf-8")
-__resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) ).decode("utf-8")
-__temp__       = xbmc.translatePath( os.path.join( __profile__, 'temp', '') ).decode("utf-8")
+__cwd__        = xbmc.translatePath( __addon__.getAddonInfo('path') )
+__profile__    = xbmc.translatePath( __addon__.getAddonInfo('profile') )
+__resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
+__temp__       = xbmc.translatePath( os.path.join( __profile__, 'temp', '') )
 
 if xbmcvfs.exists(__temp__):
   shutil.rmtree(__temp__)
@@ -29,6 +29,7 @@ xbmcvfs.mkdirs(__temp__)
 sys.path.append (__resource__)
 
 from OSUtilities import OSDBServer, log, hashFile, normalizeString
+from urllib.parse import unquote
 
 def Search( item ):
   search_data = []
@@ -42,7 +43,7 @@ def Search( item ):
 
   if search_data != None:
     search_data.sort(key=lambda x: [not x['MatchedBy'] == 'moviehash',
-				     not os.path.splitext(x['SubFileName'])[0] == os.path.splitext(os.path.basename(urllib.unquote(xbmc.Player().getPlayingFile().decode('utf-8'))))[0],
+				     not os.path.splitext(x['SubFileName'])[0] == os.path.splitext(os.path.basename(unquote(xbmc.Player().getPlayingFile())))[0],
 				     not normalizeString(xbmc.getInfoLabel("VideoPlayer.OriginalTitle")).lower() in x['SubFileName'].replace('.',' ').lower(),
 				     not x['LanguageName'] == PreferredSub])
     for item_data in search_data:
@@ -138,7 +139,7 @@ if params['action'] == 'search' or params['action'] == 'manualsearch':
   item['episode']            = str(xbmc.getInfoLabel("VideoPlayer.Episode"))                 # Episode
   item['tvshow']             = normalizeString(xbmc.getInfoLabel("VideoPlayer.TVshowtitle"))  # Show
   item['title']              = normalizeString(xbmc.getInfoLabel("VideoPlayer.OriginalTitle"))# try to get original title
-  item['file_original_path'] = xbmc.Player().getPlayingFile().decode('utf-8')                 # Full path of a playing file
+  item['file_original_path'] = xbmc.Player().getPlayingFile()                                 # Full path of a playing file
   item['3let_language']      = [] #['scc','eng']
   PreferredSub		      = params.get('preferredlanguage')
 
@@ -146,7 +147,7 @@ if params['action'] == 'search' or params['action'] == 'manualsearch':
     item['mansearch'] = True
     item['mansearchstr'] = params['searchstring']
 
-  for lang in urllib.unquote(params['languages']).decode('utf-8').split(","):
+  for lang in unquote(params['languages']).split(","):
     if lang == "Portuguese (Brazil)":
       lan = "pob"
     elif lang == "Greek":

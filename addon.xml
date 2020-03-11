@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="service.subtitles.opensubtitles"
        name="OpenSubtitles.org"
-       version="5.0.16"
+       version="5.1.0"
        provider-name="amet, opensubtitles">
   <requires>
-    <import addon="xbmc.python" version="2.1.0"/>
+    <import addon="xbmc.python" version="3.0.0"/>
   </requires>
   <extension point="xbmc.subtitle.module"
              library="service.py" />
@@ -51,6 +51,9 @@
 	<description lang="zh">多语种的电影及剧集字幕，每日更新千余条翻译好的字幕。免费下载，提供API接口，已拥有上百万的用户。</description>
     <disclaimer>Users need to provide OpenSubtitles.org username and password in add-on configuration</disclaimer>                                               
 	<news>
+v5.1.0 (2020-03-11) by juokelis
+- Ported to python 3.0. The 30th anniversary of the Restoration of Independence of Lithuania
+
 v5.0.16 (2016-11-26) by opensubtitles
 - Changed descriptions, icons, fanart... (by opensubtitles)
 
