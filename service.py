@@ -48,7 +48,7 @@ def Search( item ):
 				     not x['LanguageName'] == PreferredSub])
     for item_data in search_data:
       ## hack to work around issue where Brazilian is not found as language in XBMC
-      if item_data["LanguageName"] == "Brazilian":
+      if item_data["LanguageName"] == "Portuguese (BR)":
         item_data["LanguageName"] = "Portuguese (Brazil)"
 
       if ((item['season'] == item_data['SeriesSeason'] and
