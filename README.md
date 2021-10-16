@@ -1,8 +1,13 @@
-OpenSubtitles.org KODI add-on
+OpenSubtitles.com KODI add-on
 =============================
-Search and download subtitles for movies and TV-Series from OpenSubtitles.org. Search in 75 languages, 4.000.000+ subtitles, daily updates.
-                            
+Search and download subtitles for movies and TV-Series from OpenSubtitles.com. Search in 75 languages, 4.000.000+ subtitles, daily updates.
+
+REST API implementation based on tomburke25 [python-opensubtitles-rest-api](https://github.com/tomburke25/python-opensubtitles-rest-api)                            
+
 Changelog
+
+6.0.0
+- Moving to OpenSubtitles.com REST API
 
 5.1.2
 - Fixes for python3/matrix. Remove sys.path.append.

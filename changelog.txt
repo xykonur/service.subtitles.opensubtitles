@@ -1,3 +1,6 @@
+6.0.0
+- Moving to OpenSubtitles.com REST API
+
 5.1.2
 - Fixes for python3/matrix. Remove sys.path.append.
 

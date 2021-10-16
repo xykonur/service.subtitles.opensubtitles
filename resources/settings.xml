@@ -3,5 +3,6 @@
     <category label="32004">
       <setting id="OSuser" type="text" label="32002" default=""/>
       <setting id="OSpass" type="text" option = "hidden" label="32003" default=""/>
-    </category>   
+      <setting id="APIKey" type="text" label="32006" default=""/>
+    </category>
 </settings>

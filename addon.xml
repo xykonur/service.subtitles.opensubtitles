@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="service.subtitles.opensubtitles"
-       name="OpenSubtitles.org"
-       version="5.1.2"
+       name="OpenSubtitles.com"
+       version="6.0.0"
        provider-name="amet, opensubtitles, juokelis">
 	<requires>
 		<import addon="xbmc.python" version="3.0.0"/>
@@ -10,7 +10,7 @@
              library="service.py" />
 	<extension point="xbmc.addon.metadata">
 		<summary lang="en_GB">OpenSubtitles</summary>
-		<description lang="en_GB">Search and download subtitles for movies and TV-Series from OpenSubtitles.org. Search in 75 languages, 4.000.000+ subtitles, daily updates.</description>
+		<description lang="en_GB">Search and download subtitles for movies and TV-Series from OpenSubtitles.com. Search in 75 languages, 4.000.000+ subtitles, daily updates.</description>
 		<description lang="ast_ES">Pelis and Subtítulos TV en munches llingües, milenta de subtítulos traducíos y xubíos caldía. Descarga llibre dende la fonte, sofitu API, millones d'usuarios.</description>
 		<description lang="br_FR">Istitloù Filmoù ha TV e meur a yezh, miliadoù a istitloù troet hag uskarget bemdez. Pellgargadenn digoust diouzh ar vammenn, skoazell an API, millionoù a implijerien.</description>
 		<description lang="ca_ES">Subtítols de films i televisió en múltiples idiomes, milers de subtítols traduïts carregats diàriament. Descàrrega gratuïta des de la font, suport de l'API, amb milions d'usuaris.</description>
@@ -49,15 +49,15 @@
 		<description lang="tr_TR">Her gün eklenen, pek çok dildeki binlerce film ve dizi altyazısı. Kaynağından ücretsiz indirme, API desteği ve milyonlarca kullanıcı.</description>
 		<description lang="uz_UZ">Film va TV Taglavhalari ko'p tillarda, minglab tarjima qilingan taglavhalar har kuni tizimga yuklanadi. Bepul resursdan yuklab oling, API qo'llaydi, millionlab foydalanuvchilar.</description>
 		<description lang="zh_CN">多语种的电影及剧集字幕，每日更新千余条翻译好的字幕。免费下载，提供API接口，已拥有上百万的用户。</description>
-		<disclaimer lang="en_GB">Users need to provide OpenSubtitles.org username and password in add-on configuration</disclaimer>                                               
+		<disclaimer lang="en_GB">Users need to provide OpenSubtitles.com username, password and API key in add-on configuration</disclaimer>
 		<news>
-v5.1.2 (2020-03-21) by enen92
-- Fixes for python3/matrix. Remove sys.path.append.
+v6.0.0 (2021-10-16) by juokelis
+- New branch to work on new REST API.
 		</news>
 		<platform>all</platform>
 		<license>GPL-2.0-only</license>
 		<forum>https://forum.opensubtitles.org/viewtopic.php?f=8&amp;t=15847</forum>
-		<website>http://www.opensubtitles.org</website>
+		<website>http://www.opensubtitles.com</website>
 		<email>admin [at] opensubtitles {dot} org</email>
 		<assets>
 			<icon>resources/media/os_logo_512x512.png</icon>

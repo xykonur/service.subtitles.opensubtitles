@@ -16,3 +16,11 @@ msgstr "密码"
 msgctxt "#32004"
 msgid "Login Details"
 msgstr "登录详细信息"
+
+msgctxt "#32005"
+msgid "Your opensubtitles.com username, password or API key is empty or not valid"
+msgstr ""
+
+msgctxt "#32006"
+msgid "API Key"
+msgstr ""
