@@ -35,7 +35,7 @@ def Search( item ):
     search_data = OSDBServer().searchsubtitles(item)
   except:
     log( __name__, "failed to connect to service for subtitle search")
-    xbmcgui.Dialog().ok(__scriptname__, '{}\n{}'.format(__language__(32001),__language__(32005)))
+    xbmcgui.Dialog().ok(__scriptname__, '{}\n{}'.format(__language__(32001),__language__(32002)))
     return
 
   if search_data != None:
