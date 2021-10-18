@@ -24,15 +24,9 @@
                         <hidden>true</hidden>
                     </control>
                 </setting>
-                <setting id="APIKey" type="string" label="32203">
-                    <level>0</level>
-                    <default/>
-                    <constraints>
-                        <allowempty>true</allowempty>
-                    </constraints>
-                    <control type="edit" format="string">
-                        <heading>32203</heading>
-                    </control>
+                <setting id="APIKey" type="string">
+                    <level>4</level>
+                    <default>kZs3qLcjc8Ndcdv5gk8NTMGhE9yCKvMx</default>
                 </setting>
             </group>
         </category>
