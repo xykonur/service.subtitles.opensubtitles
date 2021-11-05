@@ -5,6 +5,7 @@
        provider-name="amet, opensubtitles, juokelis">
 	<requires>
 		<import addon="xbmc.python" version="3.0.0"/>
+		<import addon="script.module.requests" version="2.25.1+matrix.1"/>
 	</requires>
 	<extension point="xbmc.subtitle.module"
              library="service.py" />
@@ -56,7 +57,7 @@ v6.0.0 (2021-10-16) by juokelis
 		</news>
 		<platform>all</platform>
 		<license>GPL-2.0-only</license>
-		<forum>https://forum.opensubtitles.org/viewtopic.php?f=11&t=17596&p=46169</forum>
+		<forum>https://forum.opensubtitles.org/viewtopic.php?f=11&amp;t=17596&amp;p=46169</forum>
 		<website>https://www.opensubtitles.com</website>
 		<email>admin [at] opensubtitles {dot} org</email>
 		<assets>

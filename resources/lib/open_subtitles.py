@@ -1,136 +1,139 @@
-from file_operations import File
-from urllib.parse import urlencode
+# -*- coding: utf-8 -*-
 
 import os
-import requests
-import requests_cache
 import json
 import sys
 
+from requests import Session, ConnectionError, HTTPError, ReadTimeout, Timeout
 
-class OpenSubtitles(object):
+from resources.lib.os_subtitles_request import OpenSubtitlesSubtitlesRequest
 
-    def __init__(self):
+'''local kodi module imports. replace by any other exception, cache, log provider'''
+from resources.lib.exceptions import AuthenticationError, ConfigurationError, DownloadLimitExceeded, ProviderError, \
+    ServiceUnavailable, TooManyRequests
+from resources.lib.cache import Cache
+from resources.lib.utilities import log
 
-        # reduce load on API server with local cache
-        # I haven't run any tests to see how effective this is
-        requests_cache.install_cache(cache_name='opensubtitle_cache', backend='sqlite', expire_after=600)
 
-        # stop cache growing too big
-        requests_cache.remove_expired_responses()
+API_URL = "https://www.opensubtitles.com/api/v1/"
+API_LOGIN = "login"
+API_SUBTITLES = "subtitles"
+API_DOWNLOAD = "download"
 
-        self.login_token = ""
-        self.user_downloads_remaining = ""
-        self.folder_path = ""
-        self.file_name = ""
-        self.sublanguage = ""
-        self.forced = ""
+REQUEST_TIMEOUT = 30
 
-        # import secrets from .credentials file. Or remove this and hard code them.
-        try:
-            self.credentials_dic = []
-            with open('.credentials', 'r') as credential_file:
-                self.credentials_dic = eval(credential_file.read())
-                self.username = self.credentials_dic['username']
-                self.password = self.credentials_dic['password']
-                self.apikey = self.credentials_dic['api-key']
 
-        except FileNotFoundError:
-            print("No credentials file found at \"" + os.path.dirname(os.path.realpath(__file__)) + "/.credentials\"")
-        except KeyError:
-            print("Incorrectly formatted secrets in .credentials file")
+# Replace with any other log implementation outside fo module/Kodi
+def logging(msg):
+    return log(__name__, msg)
 
-    # make login request. Returns auth token
+
+class OpenSubtitlesProvider(object):
+
+    def __init__(self, api_key, username, password):
+
+        if not all((username, password)):
+            raise ConfigurationError("Username and password must be specified")
+
+        if not api_key:
+            raise ConfigurationError("Api_key must be specified")
+
+        self.api_key = api_key
+        self.username = username
+        self.password = password
+
+        self.user_token = ""
+
+        self.request_headers = {"Api-Key": self.api_key, "Content-Type": "application/json"}
+
+        self.session = Session()
+        self.session.headers = self.request_headers
+
+        # Use any other cache outside of module/Kodi
+        self.cache = Cache(key_prefix="os_com")
+
+    # make login request. Sets auth token
     def login(self):
 
         # build login request
-        login_url = "https://www.opensubtitles.com/api/v1/login"
-        login_headers = {'api-key': self.apikey, 'content-type': 'application/json'}
-        login_body = {'username': self.username, 'password': self.password}
+        login_url = API_URL + API_LOGIN
+        login_body = {"username": self.username, "password": self.password}
 
         try:
-            login_response = requests.post(login_url, data=json.dumps(login_body), headers=login_headers)
-            login_response.raise_for_status()
-            login_json_response = login_response.json()
+            r = self.session.post(login_url, json=login_body, timeout=REQUEST_TIMEOUT)
+            r.raise_for_status()
+        except (ConnectionError, Timeout, ReadTimeout) as e:
+            raise ServiceUnavailable("Unknown Error: %s: %r" % (e.response.status_code, e))
+        except HTTPError as e:
+            status_code = e.response.status_code
+            if status_code == 401:
+                raise AuthenticationError("Login failed: {}".format(e))
+            elif status_code == 429:
+                raise TooManyRequests()
+            elif status_code == 503:
+                raise ProviderError(e)
+            else:
+                raise ProviderError("Bad status code: {}".format(status_code))
+        else:
+            try:
+                self.user_token = r.json()["token"]
+            except ValueError:
+                raise ValueError("Invalid JSON returned by provider")
+            else:
+                self.cache.set(key="user_token", value=self.user_token)
+                return
 
-            # this is our login token, we need it later
-            self.login_token = login_json_response['token']
-        except requests.exceptions.HTTPError as httperr:
-            raise SystemExit(httperr) # need more documentation to know exactly what the API HTTP error responses are
-        except requests.exceptions.RequestException as reqerr:
-            raise SystemExit("Failed to login: " + reqerr)
-        except ValueError as e:
-            raise SystemExit("Failed to parse login JSON response: " + e)
+    def search_subtitles(self, query: dict or OpenSubtitlesSubtitlesRequest):
 
-        # build user request
-        user_url = "https://www.opensubtitles.com/api/v1/infos/user"
-        user_headers = {'api-key': self.apikey, 'authorization': self.login_token}
+        logging(type(query))
+        logging(query)
+        if type(query) is dict:
+            try:
+                subtitle_request = OpenSubtitlesSubtitlesRequest(**query)
+            except ValueError as e:
+                raise ValueError("Invalid subtitle search data provided: {}".format(e))
+        elif type(query) is OpenSubtitlesSubtitlesRequest:
+            subtitle_request = query
+        else:
+            raise ValueError("Invalid subtitle search data provided. Invalid query type")
+
+        logging(vars(subtitle_request))
+        params = subtitle_request.request_params()
+        logging(params)
+
+        if not len(params):
+            raise ValueError("Invalid subtitle search data provided. Empty Object built")
 
         try:
-            # dont cache remaining_downloads, as this changes every time
-            with requests_cache.disabled():
-                user_response = requests.get(user_url, headers=user_headers)
-                user_response.raise_for_status()
-
-                # standard accounts have a low limit. Upgrade to VIP if you want more. It's about 10EUR a year.
-                user_json_response = user_response.json()
-                self.user_downloads_remaining = user_json_response['data']['remaining_downloads']
-
-        except requests.exceptions.HTTPError as httperr:
-            raise SystemExit(
-                httperr)  # need more documentation to know exactly what the API HTTP error responses are
-        except requests.exceptions.RequestException as reqerr:
-            raise SystemExit("Failed to login: " + reqerr)
-        except ValueError as e:
-            raise SystemExit("Failed to parse user JSON response: " + e)
-
-    # get the first hash matching subtitle file
-    def get_subtitle_file_info(self, full_file_path, sublanguage, forced=False):
-
-        # file to inspect
-        self.folder_path = str(os.path.dirname(full_file_path))
-        self.file_name = str(os.path.basename(full_file_path))
-        self.sublanguage = sublanguage
-        self.forced = forced
-
-        try:
-            file_to_inspect = File(full_file_path)
-        except FileNotFoundError as fileerr:
-            SystemExit("Input video file could not be found")
-
-        # add additional query params here. May be able to sort by rating etc once API is updated.
-        try:
-            query_params = {'moviehash': file_to_inspect.get_hash(),
-                            'foreign_parts_only': 'only' if forced else 'exclude',
-                            'languages': self.sublanguage,
-                            'query': self.file_name}
-
-            # uncomment if you are having problems with filename special character encoding problems
-            #query_params = urlencode(query_params)
-
             # build query request
-            query_url = 'https://www.opensubtitles.com/api/v1/subtitles?'
-            query_headers = {'api-key': self.apikey}
-            query_response = requests.get(query_url, params=query_params, headers=query_headers)
-            query_response.raise_for_status()
-            query_json_response = query_response.json()
+            subtitles_url = API_URL + API_SUBTITLES
+            r = self.session.get(subtitles_url, params=params, timeout=30)
+            logging(r.url)
+            r.raise_for_status()
+        except (ConnectionError, Timeout, ReadTimeout) as e:
+            raise ServiceUnavailable("Unknown Error, empty response: %s: %r" % (e.status_code, e))
+        except HTTPError as e:
+            status_code = e.response.status_code
+            if status_code == 429:
+                raise TooManyRequests()
+            elif status_code == 503:
+                raise ProviderError(e)
+            else:
+                raise ProviderError("Bad status code: {}".format(status_code))
 
-            # get file number from first item, first file
-            query_file_no = query_json_response['data'][0]['attributes']['files'][0]['file_id']
-            query_file_name = query_json_response['data'][0]['attributes']['files'][0]['file_name']
+        try:
+            result = r.json()
+            if "data" not in result:
+                raise ValueError
+        except ValueError:
+            raise ProviderError("Invalid JSON returned by provider")
+        else:
+            logging("Query returned {} subtitles".format(len(result["data"])))
 
-            return {'file_no': query_file_no, 'file_name': query_file_name}
+        if len(result["data"]):
+            return result["data"]
 
-        except requests.exceptions.HTTPError as httperr:
-            raise SystemExit(httperr)  # need more documentation to know exactly what the API HTTP error responses are
-        except requests.exceptions.RequestException as reqerr:
-            raise SystemExit("Failed to login: " + reqerr)
-        except ValueError as e:
-            raise SystemExit("Failed to parse search_subtitle JSON response: " + e)
-        except IndexError as inerr:
-            print("No subtitle found at OpenSubtitles for " + self.file_name)
-
-
+        return None
 
     # download a single subtitle file using the file_no
     def download_subtitle(self, file_no, output_directory=None, output_filename=None, overwrite=False):
@@ -148,7 +151,7 @@ class OpenSubtitles(object):
         download_url = "https://www.opensubtitles.com/api/v1/download"
         download_headers = {'api-key': self.apikey,
                             'authorization': self.login_token,
-                            'content-type': 'application/json'}
+                            'content-type': CONTENT_TYPE}
         download_body = {'file_id': file_no}
 
         # dont download if subtitle already exists
@@ -161,7 +164,8 @@ class OpenSubtitles(object):
 
             try:
                 # this will cost a download
-                download_response = requests.post(download_url, data=json.dumps(download_body), headers=download_headers)
+                download_response = requests.post(download_url, data=json.dumps(download_body),
+                                                  headers=download_headers)
                 download_json_response = download_response.json()
 
                 # get the link stored on the server
@@ -177,7 +181,8 @@ class OpenSubtitles(object):
 
 
             except requests.exceptions.HTTPError as httperr:
-                raise SystemExit(httperr)  # need more documentation to know exactly what the API HTTP error responses are
+                raise SystemExit(
+                    httperr)  # need more documentation to know exactly what the API HTTP error responses are
             except requests.exceptions.RequestException as reqerr:
                 raise SystemExit("Failed to login: " + reqerr)
             except ValueError as e:

@@ -1,97 +1,105 @@
-import struct
+# -*- coding: utf-8 -*-
+
 import os
-import hashlib
-import zlib
-import base64
-from platform import python_version_tuple
-from warnings import warn
+import struct
 
-try:
-    if int(python_version_tuple()[0]) < 3:
-        raise ImportError
-    from charset_normalizer import detect
-except ImportError:
-    try:
-        from cchardet import detect
-    except ImportError:
-        try:
-            from chardet import detect
-            warn('python chardet is installed but could be unreliable, upgrade to python 3 and install '
-                 'charset-normalizer or cchardet.')
-        except ImportError:
-            def detect(bytes_str):
-                return None
+import xbmcvfs
+
+from resources.lib.utilities import log
 
 
-def decompress(data, enable_encoding_guessing=True, encoding='utf-8'):
-    """
-    Convert a base64-compressed subtitles file back to a string.
-    :param data: the compressed data
-    :param bool enable_encoding_guessing:
-    :param str decoding: if not enable_encoding_guessing you can specify the encoding here. e.g. "latin"
-    """
+def get_file_data(file_original_path):
+    item = {"temp": False, "rar": False, "file_original_path": file_original_path}
 
-    raw_subtitle = zlib.decompress(base64.b64decode(data), 16 + zlib.MAX_WBITS)
-    encoding_detection = detect(raw_subtitle) if enable_encoding_guessing is True else None
+    if file_original_path.find("http") > -1:
+        item["temp"] = True
 
-    if encoding_detection is None:
-        return raw_subtitle.decode(encoding, errors='ignore')
+    elif file_original_path.find("rar://") > -1:
+        item["rar"] = True
+        item["file_original_path"] = os.path.dirname(file_original_path[6:])
 
-    try:
-        my_decoded_str = raw_subtitle.decode(encoding_detection['encoding'])
-    except UnicodeDecodeError as e:
-        print(e)
-        return
+    elif file_original_path.find("stack://") > -1:
+        stack_path = file_original_path.split(" , ")
+        item["file_original_path"] = stack_path[0][8:]
 
-    return my_decoded_str
+    if not item["temp"]:
+        item["file_size"], item["moviehash"] = hash_file(item["file_original_path"], item["rar"])
+
+    return item
 
 
-def get_gzip_base64_encoded(file_path):
-    handler = open(file_path, mode='rb').read()
-    return base64.encodestring(zlib.compress(handler))
+def hash_file(file_path, rar):
+    if rar:
+        return hash_rar(file_path)
 
+    log(__name__, "Hash Standard file")
+    long_long_format = "q"  # long long
+    byte_size = struct.calcsize(long_long_format)
+    with xbmcvfs.File(file_path) as f:
+        file_size = f.size()
+        hash_ = file_size
 
-def get_md5(file_path):
-    '''Return the md5 of a file.
-    '''
-    with open(file_path, 'rb') as f:
-        return hashlib.md5(f.read()).hexdigest()
-
-
-class File(object):
-    def __init__(self, path):
-        self.path = path
-        self.size = str(os.path.getsize(path))
-
-    def get_hash(self):
-        '''Original from: http://goo.gl/qqfM0
-        '''
-        longlongformat = 'q'  # long long
-        bytesize = struct.calcsize(longlongformat)
-
-        try:
-            f = open(self.path, "rb")
-        except(IOError):
-            return "IOError"
-
-        hash = int(self.size)
-
-        if int(self.size) < 65536 * 2:
+        if file_size < 65536 * 2:
             return "SizeError"
 
-        for _ in range(65536 // bytesize):
-            buffer = f.read(bytesize)
-            (l_value, ) = struct.unpack(longlongformat, buffer)
-            hash += l_value
-            hash = hash & 0xFFFFFFFFFFFFFFFF  # to remain as 64bit number
-
-        f.seek(max(0, int(self.size) - 65536), 0)
-        for _ in range(65536 // bytesize):
-            buffer = f.read(bytesize)
-            (l_value, ) = struct.unpack(longlongformat, buffer)
-            hash += l_value
-            hash = hash & 0xFFFFFFFFFFFFFFFF
-
+        buffer = f.readBytes(65536)
+        f.seek(max(0, file_size - 65536), 0)
+        buffer += f.readBytes(65536)
         f.close()
-        returnedhash = "%016x" % hash
-        return str(returnedhash)
+
+    for x in range(int(65536 / byte_size) * 2):
+        size = x * byte_size
+        (l_value,) = struct.unpack(long_long_format, buffer[size:size + byte_size])
+        hash_ += l_value
+        hash_ = hash_ & 0xFFFFFFFFFFFFFFFF
+
+    return_hash = "%016x" % hash_
+    return file_size, return_hash
+
+
+def hash_rar(first_rar_file):
+    log(__name__, "Hash Rar file")
+    f = xbmcvfs.File(first_rar_file)
+    a = f.readBytes(4)
+    if a != "Rar!":
+        raise Exception("ERROR: This is not rar file.")
+    seek = 0
+    for i in range(4):
+        f.seek(max(0, seek), 0)
+        a = f.readBytes(100)
+        type_, flag, size = struct.unpack("<BHH", a[2:2 + 5])
+        if 0x74 == type_:
+            if 0x30 != struct.unpack("<B", a[25:25 + 1])[0]:
+                raise Exception("Bad compression method! Work only for 'store'.")
+            s_divide_body_start = seek + size
+            s_divide_body, s_unpack_size = struct.unpack("<II", a[7:7 + 2 * 4])
+            if flag & 0x0100:
+                s_unpack_size = (struct.unpack("<I", a[36:36 + 4])[0] << 32) + s_unpack_size
+                log(__name__, "Hash untested for files bigger that 2gb. May work or may generate bad hash.")
+            last_rar_file = get_last_split(first_rar_file, (s_unpack_size - 1) / s_divide_body)
+            hash_ = add_file_hash(first_rar_file, s_unpack_size, s_divide_body_start)
+            hash_ = add_file_hash(last_rar_file, hash_, (s_unpack_size % s_divide_body) + s_divide_body_start - 65536)
+            f.close()
+            return s_unpack_size, "%016x" % hash_
+        seek += size
+    raise Exception("ERROR: Not Body part in rar file.")
+
+
+def get_last_split(first_rar_file, x):
+    if first_rar_file[-3:] == "001":
+        return first_rar_file[:-3] + ("%03d" % (x + 1))
+    if first_rar_file[-11:-6] == ".part":
+        return first_rar_file[0:-6] + ("%02d" % (x + 1)) + first_rar_file[-4:]
+    if first_rar_file[-10:-5] == ".part":
+        return first_rar_file[0:-5] + ("%1d" % (x + 1)) + first_rar_file[-4:]
+    return first_rar_file[0:-2] + ("%02d" % (x - 1))
+
+
+def add_file_hash(name, hash_, seek):
+    f = xbmcvfs.File(name)
+    f.seek(max(0, seek), 0)
+    for i in range(8192):
+        hash_ += struct.unpack("<q", f.readBytes(8))[0]
+        hash_ = hash_ & 0xffffffffffffffff
+    f.close()
+    return hash_
