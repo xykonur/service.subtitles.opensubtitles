@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import os
-import json
-import sys
+from typing import Union
 
-from requests import Session, ConnectionError, HTTPError, ReadTimeout, Timeout
+from requests import Session, ConnectionError, HTTPError, ReadTimeout, Timeout, RequestException
 
 from resources.lib.os_subtitles_request import OpenSubtitlesSubtitlesRequest
+from resources.lib.os_download_request import OpenSubtitlesDownloadRequest
 
 '''local kodi module imports. replace by any other exception, cache, log provider'''
 from resources.lib.exceptions import AuthenticationError, ConfigurationError, DownloadLimitExceeded, ProviderError, \
@@ -14,21 +13,49 @@ from resources.lib.exceptions import AuthenticationError, ConfigurationError, Do
 from resources.lib.cache import Cache
 from resources.lib.utilities import log
 
-
 API_URL = "https://www.opensubtitles.com/api/v1/"
 API_LOGIN = "login"
 API_SUBTITLES = "subtitles"
 API_DOWNLOAD = "download"
 
+CONTENT_TYPE = "application/json"
 REQUEST_TIMEOUT = 30
 
+class_lookup = {"OpenSubtitlesSubtitlesRequest": OpenSubtitlesSubtitlesRequest,
+                "OpenSubtitlesDownloadRequest": OpenSubtitlesDownloadRequest}
+
+
+# TODO implement search for features, logout, infos. Response(-s) objects
 
 # Replace with any other log implementation outside fo module/Kodi
 def logging(msg):
     return log(__name__, msg)
 
 
-class OpenSubtitlesProvider(object):
+def query_to_params(query, _type):
+    logging("type: ")
+    logging(type(query))
+    logging("query: ")
+    logging(query)
+    if type(query) is dict:
+        try:
+            request = class_lookup[_type](**query)
+        except ValueError as e:
+            raise ValueError(f"Invalid request data provided: {e}")
+    elif type(query) is _type:
+        request = query
+    else:
+        raise ValueError("Invalid request data provided. Invalid query type")
+
+    logging("request vars: ")
+    logging(vars(request))
+    params = request.request_params()
+    logging("params: ")
+    logging(params)
+    return params
+
+
+class OpenSubtitlesProvider:
 
     def __init__(self, api_key, username, password):
 
@@ -42,9 +69,7 @@ class OpenSubtitlesProvider(object):
         self.username = username
         self.password = password
 
-        self.user_token = ""
-
-        self.request_headers = {"Api-Key": self.api_key, "Content-Type": "application/json"}
+        self.request_headers = {"Api-Key": self.api_key, "Content-Type": CONTENT_TYPE, "Accept": CONTENT_TYPE}
 
         self.session = Session()
         self.session.headers = self.request_headers
@@ -60,46 +85,38 @@ class OpenSubtitlesProvider(object):
         login_body = {"username": self.username, "password": self.password}
 
         try:
-            r = self.session.post(login_url, json=login_body, timeout=REQUEST_TIMEOUT)
+            r = self.session.post(login_url, json=login_body, allow_redirects=False, timeout=REQUEST_TIMEOUT)
+            logging(r.url)
             r.raise_for_status()
         except (ConnectionError, Timeout, ReadTimeout) as e:
-            raise ServiceUnavailable("Unknown Error: %s: %r" % (e.response.status_code, e))
+            raise ServiceUnavailable(f"Unknown Error: {e.response.status_code}: {e!r}")
         except HTTPError as e:
             status_code = e.response.status_code
             if status_code == 401:
-                raise AuthenticationError("Login failed: {}".format(e))
+                raise AuthenticationError(f"Login failed: {e}")
             elif status_code == 429:
                 raise TooManyRequests()
             elif status_code == 503:
                 raise ProviderError(e)
             else:
-                raise ProviderError("Bad status code: {}".format(status_code))
+                raise ProviderError(f"Bad status code: {status_code}")
         else:
             try:
                 self.user_token = r.json()["token"]
             except ValueError:
                 raise ValueError("Invalid JSON returned by provider")
-            else:
-                self.cache.set(key="user_token", value=self.user_token)
-                return
 
-    def search_subtitles(self, query: dict or OpenSubtitlesSubtitlesRequest):
+    @property
+    def user_token(self):
+        return self.cache.get(key="user_token")
 
-        logging(type(query))
-        logging(query)
-        if type(query) is dict:
-            try:
-                subtitle_request = OpenSubtitlesSubtitlesRequest(**query)
-            except ValueError as e:
-                raise ValueError("Invalid subtitle search data provided: {}".format(e))
-        elif type(query) is OpenSubtitlesSubtitlesRequest:
-            subtitle_request = query
-        else:
-            raise ValueError("Invalid subtitle search data provided. Invalid query type")
+    @user_token.setter
+    def user_token(self, value):
+        self.cache.set(key="user_token", value=value)
 
-        logging(vars(subtitle_request))
-        params = subtitle_request.request_params()
-        logging(params)
+    def search_subtitles(self, query: Union[dict, OpenSubtitlesSubtitlesRequest]):
+
+        params = query_to_params(query, 'OpenSubtitlesSubtitlesRequest')
 
         if not len(params):
             raise ValueError("Invalid subtitle search data provided. Empty Object built")
@@ -109,9 +126,10 @@ class OpenSubtitlesProvider(object):
             subtitles_url = API_URL + API_SUBTITLES
             r = self.session.get(subtitles_url, params=params, timeout=30)
             logging(r.url)
+            logging(r.request.headers)
             r.raise_for_status()
         except (ConnectionError, Timeout, ReadTimeout) as e:
-            raise ServiceUnavailable("Unknown Error, empty response: %s: %r" % (e.status_code, e))
+            raise ServiceUnavailable(f"Unknown Error, empty response: {e.status_code}: {e!r}")
         except HTTPError as e:
             status_code = e.response.status_code
             if status_code == 429:
@@ -119,7 +137,7 @@ class OpenSubtitlesProvider(object):
             elif status_code == 503:
                 raise ProviderError(e)
             else:
-                raise ProviderError("Bad status code: {}".format(status_code))
+                raise ProviderError(f"Bad status code: {status_code}")
 
         try:
             result = r.json()
@@ -128,65 +146,67 @@ class OpenSubtitlesProvider(object):
         except ValueError:
             raise ProviderError("Invalid JSON returned by provider")
         else:
-            logging("Query returned {} subtitles".format(len(result["data"])))
+            logging(f"Query returned {len(result['data'])} subtitles")
 
         if len(result["data"]):
             return result["data"]
 
         return None
 
-    # download a single subtitle file using the file_no
-    def download_subtitle(self, file_no, output_directory=None, output_filename=None, overwrite=False):
+    def download_subtitle(self, query: Union[dict, OpenSubtitlesDownloadRequest]):
+        if self.user_token is None:
+            logging("No cached token, we'll try to login again.")
+            try:
+                self.login()
+            except AuthenticationError as e:
+                logging("Unable to authenticate.")
+                raise AuthenticationError("Unable to authenticate.")
+            except (ServiceUnavailable, TooManyRequests, ProviderError, ValueError) as e:
+                logging("Unable to obtain an authentication token.")
+                raise ProviderError(f"Unable to obtain an authentication token: {e}")
+        if self.user_token == "":
+            logging("Unable to obtain an authentication token.")
+            raise ProviderError("Unable to obtain an authentication token")
 
-        # default saves to same folder as video file
-        # cant set instance variable as a default argument, so a bit messy. Also it's late. I'm tired.
-        download_directory = self.folder_path if output_directory is None else output_directory
+        params = query_to_params(query, "OpenSubtitlesDownloadRequest")
 
-        download_filename = os.path.splitext(self.file_name)[0] if output_filename is None else output_filename
-        download_filename += "." + self.sublanguage
-        download_filename += ".forced" if self.forced else ""
-        download_filename += ".srt"
+        logging(f"Downloading subtitle {params['file_id']!r}")
 
         # build download request
-        download_url = "https://www.opensubtitles.com/api/v1/download"
-        download_headers = {'api-key': self.apikey,
-                            'authorization': self.login_token,
-                            'content-type': CONTENT_TYPE}
-        download_body = {'file_id': file_no}
+        download_url = API_URL + API_DOWNLOAD
+        download_headers = {"Authorization": "Bearer " + self.user_token}
+        download_params = {"file_id": params["file_id"], "sub_format": "srt"}
 
-        # dont download if subtitle already exists
-        if os.path.exists(download_directory + os.path.sep + download_filename) and not overwrite:
-            print("Subtitle file " + download_directory + os.path.sep + download_filename + " already exists")
-            return None
+        try:
+            r = self.session.post(download_url, headers=download_headers, json=download_params, timeout=REQUEST_TIMEOUT)
+            logging(r.url)
+            r.raise_for_status()
+        except (ConnectionError, Timeout, ReadTimeout) as e:
+            raise ServiceUnavailable(f"Unknown Error, empty response: {e.status_code}: {e!r}")
+        except HTTPError as e:
+            status_code = e.response.status_code
+            if status_code == 401:
+                raise AuthenticationError(f"Login failed: {e.response.reason}")
+            elif status_code == 429:
+                raise TooManyRequests()
+            elif status_code == 406:
+                raise DownloadLimitExceeded(f"Daily download limit reached: {e.response.reason}")
+            elif status_code == 503:
+                raise ProviderError(e)
+            else:
+                raise ProviderError(f"Bad status code: {status_code}")
 
-        # only download if user has download credits remaining
-        if self.user_downloads_remaining > 0:
-
-            try:
-                # this will cost a download
-                download_response = requests.post(download_url, data=json.dumps(download_body),
-                                                  headers=download_headers)
-                download_json_response = download_response.json()
-
-                # get the link stored on the server
-                download_link = download_json_response['link']
-
-                # download the file
-                download_remote_file = requests.get(download_link)
-                try:
-                    open(download_directory + os.path.sep + download_filename, 'wb').write(download_remote_file.content)
-                    print("Saved subtitle to " + download_directory + os.path.sep + download_filename)
-                except IOError:
-                    print("Failed to save subtitle to " + download_directory + os.path.sep + download_filename)
-
-
-            except requests.exceptions.HTTPError as httperr:
-                raise SystemExit(
-                    httperr)  # need more documentation to know exactly what the API HTTP error responses are
-            except requests.exceptions.RequestException as reqerr:
-                raise SystemExit("Failed to login: " + reqerr)
-            except ValueError as e:
-                raise SystemExit("Failed to parse search_subtitle JSON response: " + e)
+        try:
+            subtitle = r.json()
+            download_link = subtitle["link"]
+        except ValueError:
+            raise ProviderError("Invalid JSON returned by provider")
         else:
-            print("Download limit reached. Please upgrade your account or wait for your quota to reset (~24hrs)")
-            sys.exit(0)
+            res = self.session.get(download_link, timeout=REQUEST_TIMEOUT)
+
+            subtitle["content"] = res.content
+
+            if not subtitle["content"]:
+                logging(f"Could not download subtitle from {subtitle.download_link}")
+
+        return subtitle

@@ -1,18 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import os
-import shutil
-import sys
 from urllib.parse import unquote
 
 import xbmc
 import xbmcaddon
-import xbmcgui
-import xbmcplugin
-import xbmcvfs
-import uuid
 
-from resources.lib.file_operations import hash_file
 from resources.lib.utilities import log, normalize_string
 
 __addon__ = xbmcaddon.Addon()
@@ -66,7 +58,7 @@ def get_language_data(params):
         if lang:
             item["languages"].append(lang)
         else:
-            log(__name__, "Language code not found: '%s'" % language)
+            log(__name__, f"Language code not found: '{language}'")
 
     return item
 

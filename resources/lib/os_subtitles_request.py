@@ -2,31 +2,24 @@
 
 from datetime import date
 
-from resources.lib.utilities import log
+from resources.lib.os_request import OpenSubtitlesRequest
 
 INCLUDE_LIST = ["include", "exclude", "only"]
 INCLUDE_ONLY_LIST = ["include", "only"]
 INCLUDE_EXCLUDE_LIST = ["include", "exclude"]
 TYPE_LIST = ["movie", "episode", "all"]
+ORDER_PARAM_LIST = ["language", "download_count", "new_download_count", "download_count", "hd", "fps", "votes",
+                    "ratings", "from_trusted", "foreign_parts_only", "upload_date", "ai_translated",
+                    "machine_translated"]
 ORDER_DIRECTION_LIST = ["asc", "desc"]
 LANGUAGE_LIST = ["af", "sq", "ar", "an", "hy", "at", "eu", "be", "bn", "bs", "br", "bg", "my", "ca", "zh-cn", "cs",
                  "da", "nl", "en", "eo", "et", "fi", "fr", "ka", "de", "gl", "el", "he", "hi", "hr", "hu", "is", "id",
                  "it", "ja", "kk", "km", "ko", "lv", "lt", "lb", "mk", "ml", "ms", "ma", "mn", "no", "oc", "fa", "pl",
                  "pt-pt", "ru", "sr", "si", "sk", "sl", "es", "sw", "sv", "sy", "ta", "te", "tl", "th", "tr", "uk",
                  "ur", "uz", "vi", "ro", "pt-br", "me", "zh-tw", "ze", "se"]
-# ordered request params with defaults
-DEFAULT_LIST = dict(ai_translated="exclude", episode_number=None, foreign_parts_only="include",
-                    hearing_impaired="include", id=None, imdb_id=None, languages="", machine_translated="exclude",
-                    moviehash="", moviehash_match="include", order_by="", order_direction="", page=None,
-                    parent_feature_id=None, parent_imdb_id=None, parent_tmdb_id=None, query="", season_number=None,
-                    tmdb_id=None, trusted_sources="include", type="all", user_id=None, year=None)
 
 
-def logging(msg):
-    log(__name__, msg)
-
-
-class OpenSubtitlesSubtitlesRequest:
+class OpenSubtitlesSubtitlesRequest(OpenSubtitlesRequest):
     def __init__(self, id_: int = None, imdb_id: int = None, tmdb_id: int = None, type_="all", query="", languages="",
                  moviehash="", user_id: int = None, hearing_impaired="include", foreign_parts_only="include",
                  trusted_sources="include", machine_translated="exclude", ai_translated="exclude", order_by="",
@@ -57,7 +50,15 @@ class OpenSubtitlesSubtitlesRequest:
         self._moviehash_match = moviehash_match
         self._page = page
 
-        self._instance = True
+        super().__init__()
+
+        # ordered request params with defaults
+        self.DEFAULT_LIST = dict(ai_translated="exclude", episode_number=None, foreign_parts_only="include",
+                                 hearing_impaired="include", id=None, imdb_id=None, languages="",
+                                 machine_translated="exclude", moviehash="", moviehash_match="include", order_by="",
+                                 order_direction="desc", page=None, parent_feature_id=None, parent_imdb_id=None,
+                                 parent_tmdb_id=None, query="", season_number=None, tmdb_id=None,
+                                 trusted_sources="include", type="all", user_id=None, year=None)
 
     @property
     def id(self):
@@ -96,7 +97,7 @@ class OpenSubtitlesSubtitlesRequest:
     @type.setter
     def type(self, value):
         if value not in TYPE_LIST:
-            raise ValueError("type should be one of 'movie', 'episode' or 'all', (default: 'all').")
+            raise ValueError("type should be one of \'{0}\'. (default: \'all\').".format("', '".join(TYPE_LIST)))
         self._type = value
 
     @property
@@ -152,7 +153,8 @@ class OpenSubtitlesSubtitlesRequest:
     @hearing_impaired.setter
     def hearing_impaired(self, value):
         if value not in INCLUDE_LIST:
-            raise ValueError("hearing_impaired should be one of 'include', 'exclude' or 'only'. (default: 'include').")
+            raise ValueError(
+                "hearing_impaired should be one of \'{0}\'. (default: \'include\').".format("', '".join(INCLUDE_LIST)))
         self._hearing_impaired = value
 
     @property
@@ -163,7 +165,8 @@ class OpenSubtitlesSubtitlesRequest:
     def foreign_parts_only(self, value):
         if value not in INCLUDE_LIST:
             raise ValueError(
-                "foreign_parts_only should be one of 'include', 'exclude' or 'only'. (default: 'include').")
+                "foreign_parts_only should be one of \'{0}\'. (default: \'include\').".format(
+                    "', '".join(INCLUDE_LIST)))
         self._foreign_parts_only = value
 
     @property
@@ -173,7 +176,9 @@ class OpenSubtitlesSubtitlesRequest:
     @trusted_sources.setter
     def trusted_sources(self, value):
         if value not in INCLUDE_ONLY_LIST:
-            raise ValueError("trusted_sources should be one of 'include' or 'only'. (default: 'include').")
+            raise ValueError(
+                "trusted_sources should be one of \'{0}\'. (default: \'include\').".format(
+                    "', '".join(INCLUDE_ONLY_LIST)))
         self._trusted_sources = value
 
     @property
@@ -183,7 +188,9 @@ class OpenSubtitlesSubtitlesRequest:
     @machine_translated.setter
     def machine_translated(self, value):
         if value not in INCLUDE_EXCLUDE_LIST:
-            raise ValueError("machine_translated should be one of 'include' or 'exclude'. (default: 'exclude').")
+            raise ValueError(
+                "machine_translated should be one of \'{0}\'. (default: \'exclude\').".format(
+                    "', '".join(INCLUDE_EXCLUDE_LIST)))
         self._machine_translated = value
 
     @property
@@ -193,7 +200,9 @@ class OpenSubtitlesSubtitlesRequest:
     @ai_translated.setter
     def ai_translated(self, value):
         if value not in INCLUDE_EXCLUDE_LIST:
-            raise ValueError("ai_translated should be one of 'include' or 'exclude'. (default: 'exclude').")
+            raise ValueError(
+                "ai_translated should be one of \'{0}\'. (default: \'exclude\').".format(
+                    "', '".join(INCLUDE_EXCLUDE_LIST)))
         self._ai_translated = value
 
     @property
@@ -202,7 +211,8 @@ class OpenSubtitlesSubtitlesRequest:
 
     @order_by.setter
     def order_by(self, value):
-        if value not in DEFAULT_LIST:
+        # TODO discuss and implement (if needed) multiple order params
+        if value not in ORDER_PARAM_LIST:
             raise ValueError("order_by should be one of search params.")
         self._order_by = value
 
@@ -213,7 +223,7 @@ class OpenSubtitlesSubtitlesRequest:
     @order_direction.setter
     def order_direction(self, value):
         if value not in ORDER_DIRECTION_LIST:
-            raise ValueError("order_direction should be one of 'asc' or 'desc'.")
+            raise ValueError("order_direction should be one of \'{0}\'.".format("', '".join(ORDER_DIRECTION_LIST)))
         self._order_direction = value
 
     @property
@@ -283,7 +293,9 @@ class OpenSubtitlesSubtitlesRequest:
     @moviehash_match.setter
     def moviehash_match(self, value):
         if value not in INCLUDE_ONLY_LIST:
-            raise ValueError("moviehash_match should be one of 'include' or 'only'. (default: 'include').")
+            raise ValueError(
+                "moviehash_match should be one of \'{0}\'. (default: \'include\').".format(
+                    "', '".join(INCLUDE_ONLY_LIST)))
         self._moviehash_match = value
 
     @property
@@ -295,15 +307,3 @@ class OpenSubtitlesSubtitlesRequest:
         if value <= 0:
             raise ValueError("page should be positive integer.")
         self._page = value
-
-    def request_params(self):
-        if not self._instance:
-            raise ReferenceError("Should pass params to the class by initiating it first.")
-        request_params = {}
-        for key, default_value in DEFAULT_LIST.items():
-            current_value = getattr(self, key)
-            logging("Some property %s: %s, %s" % (key, default_value, current_value))
-            if current_value and current_value != default_value:
-                request_params[key] = current_value
-
-        return request_params

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import json
 
 from time import time
@@ -16,9 +18,9 @@ class Cache(object):
 
     def set(self, key, value, expires=60 * 60 * 24 * 7):
 
-        log(__name__, "caching %s" % key)
+        log(__name__, f"caching {key}")
         if self.key_prefix:
-            key = "{0}:{1}".format(self.key_prefix, key)
+            key = f"{self.key_prefix}:{key}"
 
         expires += time()
 
@@ -28,11 +30,11 @@ class Cache(object):
 
     def get(self, key, default=None):
 
-        log(__name__, "got request for %s from cache" % key)
+        log(__name__, f"got request for {key} from cache")
         result = default
 
         if self.key_prefix:
-            key = "{0}:{1}".format(self.key_prefix, key)
+            key = f"{self.key_prefix}:{key}"
 
         cache_data_str = self._win.getProperty(key)
 
@@ -40,6 +42,6 @@ class Cache(object):
             cache_data = json.loads(cache_data_str)
             if cache_data["expires"] > time():
                 result = cache_data["value"]
-                log(__name__, "got %s from cache" % key)
+                log(__name__, f"got {key} from cache")
 
         return result

@@ -17,7 +17,15 @@ msgid "Error searching for subtitles"
 msgstr ""
 
 msgctxt "#32002"
-msgid "Your opensubtitles.com username, password or API key is empty or not valid"
+msgid "Your opensubtitles.com username, password is empty or not valid"
+msgstr ""
+
+msgctxt "#32003"
+msgid "Unable to authenticate. Check your opensubtitles.com username, password."
+msgstr ""
+
+msgctxt "#32004"
+msgid "You have reached opensubtitles.com download limit. Get VIP or try again tomorrow."
 msgstr ""
 
 msgctxt "#32101"
@@ -51,4 +59,3 @@ msgstr ""
 msgctxt "#32213"
 msgid "Machine Translated"
 msgstr ""
-

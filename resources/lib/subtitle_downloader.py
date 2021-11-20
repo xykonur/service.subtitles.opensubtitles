@@ -3,13 +3,16 @@
 import os
 import shutil
 import sys
+import uuid
+
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
 import xbmcvfs
 
 from resources.lib.data_collector import get_language_data, get_media_data, get_file_path, convert_language
-from resources.lib.exceptions import ConfigurationError
+from resources.lib.exceptions import AuthenticationError, ConfigurationError, DownloadLimitExceeded, ProviderError, \
+    ServiceUnavailable, TooManyRequests
 from resources.lib.file_operations import get_file_data
 from resources.lib.open_subtitles import OpenSubtitlesProvider
 from resources.lib.utilities import get_params, log, error
@@ -31,13 +34,16 @@ class SubtitleDownloader:
 
         self.api_key = __addon__.getSetting("APIKey")
         self.username = __addon__.getSetting("OSuser")
-        self.password = __addon__.getSetting("OSuser")
+        self.password = __addon__.getSetting("OSpass")
 
         log(__name__, sys.argv)
 
+        self.sub_format = "srt"
+        self.handle = int(sys.argv[1])
         self.params = get_params()
         self.query = {}
         self.subtitles = {}
+        self.file = {}
 
         try:
             self.open_subtitles = OpenSubtitlesProvider(self.api_key, self.username, self.password)
@@ -62,14 +68,39 @@ class SubtitleDownloader:
         else:
             media_data = get_media_data()
         self.query = {**media_data, **file_data, **language_data}
-        self.subtitles = self.open_subtitles.search_subtitles(self.query)
+
+        try:
+            self.subtitles = self.open_subtitles.search_subtitles(self.query)
+        # TODO handle errors individually. Get clear error messages to the user
+        except (TooManyRequests, ServiceUnavailable, ProviderError, ValueError) as e:
+            error(__name__, 32001, e)
+
         log(__name__, len(self.subtitles))
         if self.subtitles and len(self.subtitles):
             self.list_subtitles()
 
     def download(self):
-        self.query = ""
-        self.open_subtitles.download_subtitle(self.params["id"])
+        try:
+            self.file = self.open_subtitles.download_subtitle(
+                {"file_id": self.params["id"], "sub_format": self.sub_format})
+        # TODO handle errors individually. Get clear error messages to the user
+        except AuthenticationError as e:
+            error(__name__, 32003, e)
+        except DownloadLimitExceeded as e:
+            error(__name__, 32004, e)
+        except (TooManyRequests, ServiceUnavailable, ProviderError, ValueError) as e:
+            error(__name__, 32001, e)
+
+        subtitle_path = os.path.join(__temp__, f"{str(uuid.uuid4())}.{self.sub_format}")
+
+        tmp_file = open(subtitle_path, "w" + "b")
+        tmp_file.write(self.file["content"])
+        tmp_file.close()
+
+        list_item = xbmcgui.ListItem(label=subtitle_path)
+        xbmcplugin.addDirectoryItem(handle=self.handle, url=subtitle_path, listitem=list_item, isFolder=False)
+
+        return
 
         """old code"""
         # subs = Download(params["ID"], params["link"], params["format"])
@@ -95,9 +126,7 @@ class SubtitleDownloader:
             list_item.setProperty("sync", "true" if attributes["moviehash_match"] else "false")
             list_item.setProperty("hearing_imp", "true" if attributes["hearing_impaired"] else "false")
             """TODO take care of multiple cds id&id or something"""
-            url = "plugin://%s/?action=download&ID=%s" % (
-                __scriptid__,
-                attributes["subtitle_id"])
+            url = f"plugin://{__scriptid__}/?action=download&id={attributes['files'][0]['file_id']}"
 
-            xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=list_item, isFolder=False)
-        xbmcplugin.endOfDirectory(int(sys.argv[1]))
+            xbmcplugin.addDirectoryItem(handle=self.handle, url=url, listitem=list_item, isFolder=False)
+        xbmcplugin.endOfDirectory(self.handle)

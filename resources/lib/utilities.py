@@ -15,7 +15,7 @@ __language__ = __addon__.getLocalizedString
 
 
 def log(module, msg):
-    xbmc.log((u"### [%s:%s] - %s" % (__addon_name__, module, msg,)), level=xbmc.LOGDEBUG)
+    xbmc.log(f"### [{__addon_name__}:{module}] - {msg}", level=xbmc.LOGDEBUG)
 
 
 # prints out msg to log and gives Kodi message with msg_id to user if msg_id provided
@@ -28,7 +28,7 @@ def error(module, msg_id=None, msg=""):
         message = "Add-on error with empty message"
     log(module, message)
     if msg_id:
-        xbmcgui.Dialog().ok(__addon_name__, "{}\n{}".format(__language__(2103), __language__(msg_id)))
+        xbmcgui.Dialog().ok(__addon_name__, f"{__language__(2103)}\n{__language__(msg_id)}")
 
 
 def get_params(string=""):
@@ -45,4 +45,4 @@ def get_params(string=""):
 
 
 def normalize_string(str_):
-    return unicodedata.normalize('NFKD', str_)
+    return unicodedata.normalize("NFKD", str_)
