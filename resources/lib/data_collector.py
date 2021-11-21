@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from urllib.parse import unquote
+from difflib import SequenceMatcher
 
 import xbmc
 import xbmcaddon
@@ -83,3 +84,27 @@ def convert_language(language, reverse=False):
         return iterated_list[language]
     else:
         return xbmc.convertLanguage(language, xbmc_param)
+
+
+def clean_feature_release_name(title, release, movie_name=""):
+    if not title:
+        if not movie_name:
+            if not release:
+                raise ValueError("None of title, release, movie_name contains a string")
+            return release
+        else:
+            if not movie_name[0:4].isnumeric():
+                name = movie_name
+            else:
+                name = movie_name[7:]
+    else:
+        name = title
+
+    match_ratio = SequenceMatcher(None, name, release).ratio()
+    log(__name__, f"name: {name}, release: {release}, match_ratio: {match_ratio}")
+    if name in release:
+        return release
+    elif match_ratio > 0.3:
+        return release
+    else:
+        return f"{name} {release}"

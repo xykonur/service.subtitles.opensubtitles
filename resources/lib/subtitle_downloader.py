@@ -10,7 +10,8 @@ import xbmcgui
 import xbmcplugin
 import xbmcvfs
 
-from resources.lib.data_collector import get_language_data, get_media_data, get_file_path, convert_language
+from resources.lib.data_collector import get_language_data, get_media_data, get_file_path, convert_language, \
+    clean_feature_release_name
 from resources.lib.exceptions import AuthenticationError, ConfigurationError, DownloadLimitExceeded, ProviderError, \
     ServiceUnavailable, TooManyRequests
 from resources.lib.file_operations import get_file_data
@@ -118,8 +119,10 @@ class SubtitleDownloader:
             attributes = subtitle["attributes"]
             language = convert_language(attributes["language"], True)
             log(__name__, attributes)
+            clean_name = clean_feature_release_name(attributes["feature_details"]["title"], attributes["release"],
+                                                    attributes["feature_details"]["movie_name"])
             list_item = xbmcgui.ListItem(label=language,
-                                         label2=attributes["release"])
+                                         label2=clean_name)
             list_item.setArt({
                 "icon": str(int(round(float(attributes["ratings"]) / 2))),
                 "thumb": attributes["language"]})
