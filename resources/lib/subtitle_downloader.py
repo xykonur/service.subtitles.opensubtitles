@@ -15,7 +15,7 @@ from resources.lib.data_collector import get_language_data, get_media_data, get_
 from resources.lib.exceptions import AuthenticationError, ConfigurationError, DownloadLimitExceeded, ProviderError, \
     ServiceUnavailable, TooManyRequests
 from resources.lib.file_operations import get_file_data
-from resources.lib.open_subtitles import OpenSubtitlesProvider
+from resources.lib.os.provider import OpenSubtitlesProvider
 from resources.lib.utilities import get_params, log, error
 
 __addon__ = xbmcaddon.Addon()
@@ -76,9 +76,12 @@ class SubtitleDownloader:
         except (TooManyRequests, ServiceUnavailable, ProviderError, ValueError) as e:
             error(__name__, 32001, e)
 
-        log(__name__, len(self.subtitles))
         if self.subtitles and len(self.subtitles):
+            log(__name__, len(self.subtitles))
             self.list_subtitles()
+        else:
+            # TODO retry using guessit???
+            log(__name__, "No subtitle found")
 
     def download(self):
         try:

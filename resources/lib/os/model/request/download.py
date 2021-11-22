@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from resources.lib.os_request import OpenSubtitlesRequest
+from resources.lib.os.model.request.abstract import OpenSubtitlesRequest
 
 SUB_FORMAT_LIST = ["srt", "sub", "mpl", "webvtt", "dfxp", "txt"]
 

@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from resources.lib.os_request import OpenSubtitlesRequest
+from resources.lib.os.model.request.abstract import OpenSubtitlesRequest
 
 INCLUDE_LIST = ["include", "exclude", "only"]
 INCLUDE_ONLY_LIST = ["include", "only"]

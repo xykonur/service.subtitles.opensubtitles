@@ -4,8 +4,8 @@ from typing import Union
 
 from requests import Session, ConnectionError, HTTPError, ReadTimeout, Timeout, RequestException
 
-from resources.lib.os_subtitles_request import OpenSubtitlesSubtitlesRequest
-from resources.lib.os_download_request import OpenSubtitlesDownloadRequest
+from resources.lib.os.model.request.subtitles import OpenSubtitlesSubtitlesRequest
+from resources.lib.os.model.request.download import OpenSubtitlesDownloadRequest
 
 '''local kodi module imports. replace by any other exception, cache, log provider'''
 from resources.lib.exceptions import AuthenticationError, ConfigurationError, DownloadLimitExceeded, ProviderError, \
@@ -25,7 +25,7 @@ class_lookup = {"OpenSubtitlesSubtitlesRequest": OpenSubtitlesSubtitlesRequest,
                 "OpenSubtitlesDownloadRequest": OpenSubtitlesDownloadRequest}
 
 
-# TODO implement search for features, logout, infos. Response(-s) objects
+# TODO implement search for features, logout, infos, guessit. Response(-s) objects
 
 # Replace with any other log implementation outside fo module/Kodi
 def logging(msg):

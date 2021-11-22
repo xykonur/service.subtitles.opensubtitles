@@ -19,14 +19,25 @@ def get_media_data():
     item = {"year": xbmc.getInfoLabel("VideoPlayer.Year"),
             "season_number": str(xbmc.getInfoLabel("VideoPlayer.Season")),
             "episode_number": str(xbmc.getInfoLabel("VideoPlayer.Episode")),
-            "tvshow": normalize_string(xbmc.getInfoLabel("VideoPlayer.TVshowtitle")),
-            "query": normalize_string(xbmc.getInfoLabel("VideoPlayer.OriginalTitle")),
-            "file_original_path": xbmc.Player().getPlayingFile()} # TODO don't need that, or have to get that from get_file_path
+            "tv_show_title": normalize_string(xbmc.getInfoLabel("VideoPlayer.TVshowtitle")),
+            "original_title": normalize_string(xbmc.getInfoLabel("VideoPlayer.OriginalTitle")),
+            "imdb_id": xbmc.getInfoLabel("VideoPlayer.IMDBNumber")}
 
-    if item["query"] == "":
+    if item["tv_show_title"]:
+        item["query"] = item["tv_show_title"]
+        item["year"] = None  # Kodi gives episode year, OS searches by series year. Without year safer.
+        item["imdb_id"] = None  # Kodi gives strange id. Without id safer.
+        # TODO if no season and episode numbers use guessit
+
+    elif item["original_title"]:
+        item["query"] = item["original_title"]
+
+    if not item["query"]:
         log(__name__, "VideoPlayer.OriginalTitle not found")
         item["query"] = normalize_string(xbmc.getInfoLabel("VideoPlayer.Title"))  # no original title, get just Title
+        # TODO try guessit if no proper title here
 
+    # TODO get episodes like that and test them properly out
     if item["episode_number"].lower().find("s") > -1:  # Check if season is "Special"
         item["season_number"] = "0"  #
         item["episode_number"] = item["episode_number"][-1:]
