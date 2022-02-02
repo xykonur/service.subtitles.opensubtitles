@@ -33,7 +33,7 @@
         <category id="filter" label="32102">
             <group id="1">
                 <setting id="hearing_impaired" type="string" label="32211">
-                    <level>2</level>
+                    <level>0</level>
                     <default>exclude</default>
                     <constraints>
                         <options>
@@ -47,7 +47,7 @@
                     </control>
                 </setting>
                 <setting id="foreign_parts_only" type="string" label="32212">
-                    <level>2</level>
+                    <level>0</level>
                     <default>include</default>
                     <constraints>
                         <options>
@@ -61,7 +61,7 @@
                     </control>
                 </setting>
                 <setting id="machine_translated" type="string" label="32213">
-                    <level>2</level>
+                    <level>0</level>
                     <default>exclude</default>
                     <constraints>
                         <options>
