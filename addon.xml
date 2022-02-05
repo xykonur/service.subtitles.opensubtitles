@@ -58,7 +58,7 @@ v6.0.0 (2021-10-16) by juokelis
 		<platform>all</platform>
 		<license>GPL-2.0-only</license>
 		<forum>https://forum.opensubtitles.org/viewtopic.php?f=11&amp;t=17596&amp;p=46169</forum>
-		<website>https://www.opensubtitles.com</website>
+		<website>https://www.opensubtitles.com/en</website>
 		<email>admin [at] opensubtitles {dot} org</email>
 		<assets>
 			<icon>resources/media/os_logo_512x512.png</icon>

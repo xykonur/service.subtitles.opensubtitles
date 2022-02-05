@@ -82,7 +82,7 @@ def convert_language(language, reverse=False):
         "Portuguese": "pt-pt",
         "Chinese (simplified)": "zh-cn",
         "Chinese (traditional)": "zh-tw"}
-    reverse_language_list = {v: k for k, v in language_list.items()}
+    reverse_language_list = {v: k for k, v in list(language_list.items())}
 
     if reverse:
         iterated_list = reverse_language_list
