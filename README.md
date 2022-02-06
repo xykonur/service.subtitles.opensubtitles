@@ -6,8 +6,15 @@ REST API implementation based on tomburke25 [python-opensubtitles-rest-api](http
 
 Changelog
 
-6.0.0
+6.0.0 (2021-10-16)
 - Moving to OpenSubtitles.com REST API
+
+5.1.4 (2022-02-05)
+- Adding french translation. (by [broadcastyourseb](https://github.com/broadcastyourseb))
+- Adding license file
+
+5.1.3 (2021-10-17)
+- Safely import translatePath. (by [antonsoroko](https://github.com/antonsoroko))
 
 5.1.2
 - Fixes for python3/matrix. Remove sys.path.append.

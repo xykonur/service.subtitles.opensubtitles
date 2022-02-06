@@ -6,7 +6,7 @@ msgid "Error searching for subtitles"
 msgstr "字幕搜索出错"
 
 msgctxt "#32002"
-msgid "Your opensubtitles.com username, password or API key is empty or not valid"
+msgid "Your OpenSubtitles.com username, password or API key is empty or not valid"
 msgstr ""
 
 msgctxt "#32101"
@@ -40,4 +40,3 @@ msgstr ""
 msgctxt "#32213"
 msgid "Machine Translated"
 msgstr ""
-
