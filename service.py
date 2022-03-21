@@ -56,7 +56,7 @@ def Search( item ):
 
       if ((item['season'] == item_data['SeriesSeason'] and
           item['episode'] == item_data['SeriesEpisode']) or
-          (item['season'] == "" and item['episode'] == "") ## for file search, season and episode == ""
+          item['season'] == "" ## for file search, season == ""
          ):
         listitem = xbmcgui.ListItem(label          = item_data["LanguageName"],
                                     label2         = item_data["SubFileName"]
